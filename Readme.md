@@ -1,6 +1,6 @@
 <img src="http://tjholowaychuk.com:6000/svg/title/GO/ARCHIVE">
 
-Go archive package with support for pattern-based filters and file transformations.
+Go archive package with support for pattern-based filters and file transformations. Used by [Up](https://github.com/apex/up) and [Apex](https://github.com/apex/apex).
 
 ---
 
