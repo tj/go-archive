@@ -9,11 +9,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO: transforms / file header (zero mtime etc)
-// TODO: performance / profile
-// TODO: symlink support
-// TODO: make it easy to highlight large files
-
 // Format is the kind of archive format.
 type Format int
 
@@ -85,7 +80,6 @@ func (a *Archive) AddDir(root string) error {
 			return nil
 		}
 
-		// TODO: maybe leave links in, option to inline if external to root?
 		if !info.Mode().IsRegular() {
 			log.Debugf("skip irregular file %q", path)
 			return nil
