@@ -1,0 +1,7 @@
+.git
+*.go
+node_modules/*
+client/build
+logs/**/*.log
+.*
+!.bar
