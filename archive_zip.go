@@ -42,5 +42,7 @@ func (w *zipWriter) Add(info os.FileInfo) (io.Writer, error) {
 		return nil, err
 	}
 
+	h.Method = zip.Deflate
+
 	return w.zip.CreateHeader(h)
 }
