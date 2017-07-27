@@ -1,9 +1,10 @@
 package archive
 
 import (
-	"archive/zip"
 	"io"
 	"os"
+
+	"github.com/klauspost/compress/zip"
 )
 
 // Writer is the writer interface for archive formats.
