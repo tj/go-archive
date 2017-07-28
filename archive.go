@@ -4,8 +4,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 
 	"github.com/apex/log"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/pkg/errors"
 )
 
@@ -40,6 +42,12 @@ type Archive struct {
 	filter Filter
 	log    log.Interface
 	w      Writer
+	stats  struct {
+		filteredFiles    int64
+		filteredDirs     int64
+		addedFiles       int64
+		sizeUncompressed int64
+	}
 }
 
 // WithFilter adds a filter.
@@ -70,9 +78,11 @@ func (a *Archive) AddDir(root string) error {
 			a.log.Debugf("filtered %s – %d", info.Name(), info.Size())
 
 			if info.IsDir() {
+				atomic.AddInt64(&a.stats.filteredDirs, 1)
 				return filepath.SkipDir
 			}
 
+			atomic.AddInt64(&a.stats.filteredFiles, 1)
 			return nil
 		}
 
@@ -84,6 +94,9 @@ func (a *Archive) AddDir(root string) error {
 			log.Debugf("skip irregular file %q", path)
 			return nil
 		}
+
+		atomic.AddInt64(&a.stats.addedFiles, 1)
+		atomic.AddInt64(&a.stats.sizeUncompressed, info.Size())
 
 		w, err := a.Add(info)
 		if err != nil {
@@ -115,6 +128,13 @@ func (a *Archive) Add(info os.FileInfo) (io.Writer, error) {
 
 // Close the archive.
 func (a *Archive) Close() error {
+	a.log.WithFields(log.Fields{
+		"filtered_files":    a.stats.filteredFiles,
+		"filtered_dirs":     a.stats.filteredDirs,
+		"files_added":       a.stats.addedFiles,
+		"size_uncompressed": humanize.Bytes(uint64(a.stats.sizeUncompressed)),
+	}).Debug("stats")
+
 	a.log.Debug("close")
 	return a.w.Close()
 }
