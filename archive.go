@@ -19,6 +19,14 @@ const (
 	Zip Format = iota
 )
 
+// Stats for an archive.
+type Stats struct {
+	FilesFiltered    int64
+	DirsFiltered     int64
+	FilesAdded       int64
+	SizeUncompressed int64
+}
+
 // New returns a new archive writer.
 func New(format Format, w io.Writer) *Archive {
 	switch format {
@@ -42,12 +50,12 @@ type Archive struct {
 	filter Filter
 	log    log.Interface
 	w      Writer
-	stats  struct {
-		filteredFiles    int64
-		filteredDirs     int64
-		addedFiles       int64
-		sizeUncompressed int64
-	}
+	stats  Stats
+}
+
+// Stats returns stats about the archive.
+func (a *Archive) Stats() Stats {
+	return a.stats
 }
 
 // WithFilter adds a filter.
@@ -78,11 +86,11 @@ func (a *Archive) AddDir(root string) error {
 			a.log.Debugf("filtered %s – %d", info.Name(), info.Size())
 
 			if info.IsDir() {
-				atomic.AddInt64(&a.stats.filteredDirs, 1)
+				atomic.AddInt64(&a.stats.DirsFiltered, 1)
 				return filepath.SkipDir
 			}
 
-			atomic.AddInt64(&a.stats.filteredFiles, 1)
+			atomic.AddInt64(&a.stats.FilesFiltered, 1)
 			return nil
 		}
 
@@ -95,8 +103,8 @@ func (a *Archive) AddDir(root string) error {
 			return nil
 		}
 
-		atomic.AddInt64(&a.stats.addedFiles, 1)
-		atomic.AddInt64(&a.stats.sizeUncompressed, info.Size())
+		atomic.AddInt64(&a.stats.FilesAdded, 1)
+		atomic.AddInt64(&a.stats.SizeUncompressed, info.Size())
 
 		w, err := a.Add(info)
 		if err != nil {
@@ -129,10 +137,10 @@ func (a *Archive) Add(info os.FileInfo) (io.Writer, error) {
 // Close the archive.
 func (a *Archive) Close() error {
 	a.log.WithFields(log.Fields{
-		"filtered_files":    a.stats.filteredFiles,
-		"filtered_dirs":     a.stats.filteredDirs,
-		"files_added":       a.stats.addedFiles,
-		"size_uncompressed": humanize.Bytes(uint64(a.stats.sizeUncompressed)),
+		"files_filtered":    a.stats.FilesFiltered,
+		"dirs_filtered":     a.stats.DirsFiltered,
+		"files_added":       a.stats.FilesAdded,
+		"size_uncompressed": humanize.Bytes(uint64(a.stats.SizeUncompressed)),
 	}).Debug("stats")
 
 	a.log.Debug("close")
