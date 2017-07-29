@@ -101,6 +101,24 @@ func (a *Archive) AddDir(root string) error {
 		atomic.AddInt64(&a.stats.FilesAdded, 1)
 		atomic.AddInt64(&a.stats.SizeUncompressed, info.Size())
 
+		if info.Mode()&os.ModeSymlink != 0 {
+			link, err := os.Readlink(info.Name())
+			if err != nil {
+				return errors.Wrap(err, "reading symlink")
+			}
+
+			w, err := a.Add(info)
+			if err != nil {
+				return errors.Wrap(err, "adding file")
+			}
+
+			if _, err := w.Write([]byte(link)); err != nil {
+				return errors.Wrap(err, "writing link")
+			}
+
+			return nil
+		}
+
 		w, err := a.Add(info)
 		if err != nil {
 			return errors.Wrap(err, "adding file")
