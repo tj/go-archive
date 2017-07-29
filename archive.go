@@ -98,11 +98,6 @@ func (a *Archive) AddDir(root string) error {
 			return nil
 		}
 
-		if !info.Mode().IsRegular() {
-			log.Debugf("skip irregular file %q", path)
-			return nil
-		}
-
 		atomic.AddInt64(&a.stats.FilesAdded, 1)
 		atomic.AddInt64(&a.stats.SizeUncompressed, info.Size())
 
