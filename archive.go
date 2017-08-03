@@ -54,8 +54,8 @@ type Archive struct {
 }
 
 // Stats returns stats about the archive.
-func (a *Archive) Stats() Stats {
-	return a.stats
+func (a *Archive) Stats() *Stats {
+	return &a.stats
 }
 
 // WithFilter adds a filter.
