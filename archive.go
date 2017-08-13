@@ -19,6 +19,22 @@ const (
 	Zip Format = iota
 )
 
+// Transformer is the interface used to transform files.
+type Transformer interface {
+	// Transform a file or its meta-data. Note that the file info
+	// is accepted as-is, so if you alter the reader contents
+	// you must provide an appropriate .Size and so on.
+	Transform(io.Reader, os.FileInfo) (io.Reader, os.FileInfo)
+}
+
+// TransformFunc implements the Transformer interface.
+type TransformFunc func(io.Reader, os.FileInfo) (io.Reader, os.FileInfo)
+
+// Transform implementation.
+func (f TransformFunc) Transform(r io.Reader, i os.FileInfo) (io.Reader, os.FileInfo) {
+	return f(r, i)
+}
+
 // Stats for an archive.
 type Stats struct {
 	FilesFiltered    int64
@@ -47,10 +63,11 @@ func NewZip(w io.Writer) *Archive {
 
 // Archive wraps a format's writer to provide conveniences.
 type Archive struct {
-	filter Filter
-	log    log.Interface
-	w      Writer
-	stats  Stats
+	filter    Filter
+	transform Transformer
+	log       log.Interface
+	w         Writer
+	stats     Stats
 }
 
 // Stats returns stats about the archive.
@@ -61,6 +78,12 @@ func (a *Archive) Stats() *Stats {
 // WithFilter adds a filter.
 func (a *Archive) WithFilter(f Filter) *Archive {
 	a.filter = f
+	return a
+}
+
+// WithTransform adds a transform.
+func (a *Archive) WithTransform(t Transformer) *Archive {
+	a.transform = t
 	return a
 }
 
@@ -119,17 +142,22 @@ func (a *Archive) AddDir(root string) error {
 			return nil
 		}
 
-		w, err := a.Add(info)
-		if err != nil {
-			return errors.Wrap(err, "adding file")
-		}
-
 		f, err := os.Open(path)
 		if err != nil {
 			return errors.Wrap(err, "opening file")
 		}
 
-		if _, err := io.Copy(w, f); err != nil {
+		var r io.Reader = f
+		if a.transform != nil {
+			r, info = a.transform.Transform(r, info)
+		}
+
+		w, err := a.Add(info)
+		if err != nil {
+			return errors.Wrap(err, "adding file")
+		}
+
+		if _, err := io.Copy(w, r); err != nil {
 			return errors.Wrap(err, "copying file")
 		}
 

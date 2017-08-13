@@ -162,6 +162,42 @@ foo/foo/foo/foo/foo/foo/foo/foo/foo/example-9.txt mode=-rwx------ size=50
 	assert.Equal(t, expected, s)
 }
 
+func TestZipWriter_transform(t *testing.T) {
+	var buf bytes.Buffer
+	zip := archive.NewZip(&buf)
+	assert.NoError(t, zip.Open(), "open")
+
+	// TODO: dirs as well?
+	zip.WithTransform(archive.TransformFunc(func(r io.Reader, i os.FileInfo) (io.Reader, os.FileInfo) {
+		info := archive.Info{
+			Name:     i.Name(),
+			Size:     i.Size(),
+			Mode:     i.Mode() | 0777,
+			Modified: i.ModTime(),
+			Dir:      i.IsDir(),
+		}
+
+		return r, info.FileInfo()
+	}))
+
+	err := zip.AddDir(filepath.Join("testdata", "static"))
+	assert.NoError(t, err, "add dir")
+	assert.NoError(t, zip.Close(), "open")
+
+	dir := unzip(t, &buf)
+
+	s, err := tree(dir)
+	assert.NoError(t, err, "tree")
+
+	expected := `testdata mode=drwxr-xr-x
+testdata/static mode=drwxr-xr-x
+testdata/static/index.html mode=-rwxrwxrwx size=117
+testdata/static/style.css mode=-rwxrwxrwx size=44
+`
+
+	assert.Equal(t, expected, s)
+}
+
 func BenchmarkZipWriter(b *testing.B) {
 	max := 250 << 10 // 250k
 	step := 25 << 10 // 25k
