@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 
 	"github.com/apex/log"
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/pkg/errors"
 )
 
