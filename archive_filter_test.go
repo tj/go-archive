@@ -8,8 +8,8 @@ import (
 )
 
 type filterCase struct {
-	Info Info
-	Ok   bool
+	Info     Info
+	Included bool
 }
 
 type filterCases []filterCase
@@ -17,7 +17,7 @@ type filterCases []filterCase
 func (cases filterCases) Test(t *testing.T, f Filter) {
 	for _, c := range cases {
 		info := c.Info.FileInfo()
-		included := c.Ok
+		included := c.Included
 
 		t.Run(info.Name(), func(t *testing.T) {
 			includedResult := !f.Match(info)
@@ -36,12 +36,12 @@ func (cases filterCases) Test(t *testing.T, f Filter) {
 	}
 }
 
-func file(name string, ok bool) filterCase {
+func file(name string, included bool) filterCase {
 	return filterCase{
 		Info: Info{
 			Name: name,
 		},
-		Ok: ok,
+		Included: included,
 	}
 }
 
@@ -65,6 +65,8 @@ func TestFilterPatterns(t *testing.T) {
 		file("main.go", false),
 		file("Readme.md", false),
 		file(".git", false),
+		// file(".git/foo", false),
+		// file(".git/foo/bar", false),
 	}
 
 	patterns := strings.NewReader(`
@@ -85,8 +87,6 @@ func TestFilterPatterns_negate(t *testing.T) {
 		file("main.go", false),
 		file("Readme.md", false),
 		file(".git", false),
-		file(".git/foo", false),
-		file(".git/foo/bar", false),
 	}
 
 	patterns := strings.NewReader(`
