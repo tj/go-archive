@@ -1,137 +1,101 @@
-package archive
+package archive_test
 
 import (
+	"bytes"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/tj/assert"
+	archive "github.com/tj/go-archive"
 )
 
-type filterCase struct {
-	Info     Info
-	Included bool
-}
-
-type filterCases []filterCase
-
-func (cases filterCases) Test(t *testing.T, f Filter) {
-	for _, c := range cases {
-		info := c.Info.FileInfo()
-		included := c.Included
-
-		t.Run(info.Name(), func(t *testing.T) {
-			includedResult := !f.Match(info)
-
-			if included == includedResult {
-				return
-			}
-
-			s := "be filtered"
-			if included {
-				s = "not be filtered"
-			}
-
-			t.Fatalf("expected %q to %s", info.Name(), s)
-		})
-	}
-}
-
-func file(name string, included bool) filterCase {
-	return filterCase{
-		Info: Info{
-			Name: name,
-		},
-		Included: included,
-	}
-}
-
 func TestFilterDotfiles(t *testing.T) {
-	cases := filterCases{
-		file("foo", true),
-		file("foo/bar/baz", true),
-		file(".envrc", false),
-		file("build/.something", false),
-		file(".git", false),
-		file(".git/hooks", false),
-		file(".git/hooks/pre-commit", false),
-	}
+	os.Chdir("testdata/node")
+	defer os.Chdir("../..")
 
-	cases.Test(t, FilterDotfiles)
+	var buf bytes.Buffer
+	a := archive.NewZip(&buf).WithFilter(archive.FilterDotfiles)
+	assert.NoError(t, a.Open(), "open")
+	assert.NoError(t, a.AddDir("."), "add dir")
+	assert.NoError(t, a.Close(), "close")
+
+	dir := unzip(t, &buf)
+	s, err := tree(dir)
+	assert.NoError(t, err, "tree")
+
+	expected := `Readme.md mode=-rw-r--r-- size=0
+app.js mode=-rw-r--r-- size=0
+package.json mode=-rw-r--r-- size=0
+up.json mode=-rw-r--r-- size=0
+`
+
+	assert.Equal(t, expected, s)
 }
 
-func TestFilterPatterns_files(t *testing.T) {
-	cases := filterCases{
-		file("server", true),
-		file("main.go", false),
-		file("Readme.md", false),
-	}
+func TestFilterPatterns_dir(t *testing.T) {
+	os.Chdir("testdata/node")
+	defer os.Chdir("../..")
 
 	patterns := strings.NewReader(`
 *.md
-*.go
+.something
 `)
 
-	f, err := FilterPatterns(patterns)
+	f, err := archive.FilterPatterns(patterns)
 	assert.NoError(t, err, "filter")
 
-	cases.Test(t, f)
+	var buf bytes.Buffer
+	a := archive.NewZip(&buf).WithFilter(f)
+	assert.NoError(t, a.Open(), "open")
+	assert.NoError(t, a.AddDir("."), "add dir")
+	assert.NoError(t, a.Close(), "close")
+
+	dir := unzip(t, &buf)
+	s, err := tree(dir)
+	assert.NoError(t, err, "tree")
+
+	expected := `app.js mode=-rw-r--r-- size=0
+package.json mode=-rw-r--r-- size=0
+up.json mode=-rw-r--r-- size=0
+`
+
+	assert.Equal(t, expected, s)
 }
 
-func TestFilterPatterns_negate(t *testing.T) {
-	cases := filterCases{
-		file("server", true),
-		file("main.go", false),
-		file("Readme.md", false),
-		file(".git", false),
-	}
+func TestFilterPatterns_negated(t *testing.T) {
+	os.Chdir("testdata/node")
+	defer os.Chdir("../..")
 
 	patterns := strings.NewReader(`
-*
-!server
+*.md
+*.json
+!up.json
+.something
+!.something
 `)
 
-	f, err := FilterPatterns(patterns)
+	f, err := archive.FilterPatterns(patterns)
 	assert.NoError(t, err, "filter")
 
-	cases.Test(t, f)
-}
+	var buf bytes.Buffer
+	a := archive.NewZip(&buf).WithFilter(f)
+	assert.NoError(t, a.Open(), "open")
+	assert.NoError(t, a.AddDir("."), "add dir")
+	assert.NoError(t, a.Close(), "close")
 
-func TestFilterPatternFiles(t *testing.T) {
-	cases := filterCases{
-		file("server", true),
-		file("static", true),
-		file("static/index.html", true),
-		file("node_modules/foo", false),
-		file("node_modules/bar", false),
-		file("client/build", false),
-		// file("logs/foo.log", false),
-		// file("logs/foo/bar.log", false),
-		// file("logs/foo/baz.log", false),
-		file("main.go", false),
-		file("Readme.md", false),
-		file("package.json", false),
-		file(".git", false),
-		file(".envrc", false),
-		file(".foo", false),
-		file(".bar", true),
-	}
+	dir := unzip(t, &buf)
+	s, err := tree(dir)
+	assert.NoError(t, err, "tree")
 
-	f, err := FilterPatternFiles("testdata/.gitignore", "testdata/nope", "testdata/.npmignore", "testdata/.upignore")
-	assert.NoError(t, err, "filter")
+	expected := `.something mode=drwxr-xr-x
+.something/bar mode=drwxr-xr-x
+.something/bar/baz mode=drwxr-xr-x
+.something/bar/baz/something mode=-rw-r--r-- size=0
+.something/foo mode=-rw-r--r-- size=0
+app.js mode=-rw-r--r-- size=0
+up.json mode=-rw-r--r-- size=0
+`
 
-	cases.Test(t, f)
-}
-
-func BenchmarkFilter(b *testing.B) {
-	b.Run("FilterDotfiles", func(b *testing.B) {
-		f := FilterDotfiles
-
-		info := Info{
-			Name: "something",
-		}.FileInfo()
-
-		for i := 0; i < b.N; i++ {
-			f.Match(info)
-		}
-	})
+	assert.Equal(t, expected, s)
 }
