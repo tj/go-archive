@@ -85,6 +85,8 @@ func TestFilterPatterns_negate(t *testing.T) {
 		file("main.go", false),
 		file("Readme.md", false),
 		file(".git", false),
+		file(".git/foo", false),
+		file(".git/foo/bar", false),
 	}
 
 	patterns := strings.NewReader(`
