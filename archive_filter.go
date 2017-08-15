@@ -46,9 +46,8 @@ func FilterPatterns(r io.Reader) (Filter, error) {
 	return FilterFunc(func(info os.FileInfo) bool {
 		if match := filter.Relative(info.Name(), info.IsDir()); match != nil {
 			return match.Ignore()
-		} else {
-			return false
 		}
+		return false
 	}), nil
 }
 

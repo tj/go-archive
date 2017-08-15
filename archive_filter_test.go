@@ -98,6 +98,37 @@ func TestFilterPatterns_negate(t *testing.T) {
 	cases.Test(t, f)
 }
 
+func TestFilterPattern_deeply_nested(t *testing.T) {
+	cases := filterCases{
+		file(".git", false),
+		file("readme.md", false),
+		file("server", true),
+
+		file("node_modules", true),
+
+		file("package.json", false),
+		file("node_modules/foo/package.json", true),
+
+		file("src/main.go", false),
+		file("node_modules/bar/src", true),
+		file("node_modules/bar/src/index.js", true),
+	}
+
+	patterns := strings.NewReader(`
+.git
+readme.md
+src/**
+package.json
+!node_modules/**
+!server
+`)
+
+	f, err := FilterPatterns(patterns)
+	assert.NoError(t, err, "filter")
+
+	cases.Test(t, f)
+}
+
 func TestFilterPatternFiles(t *testing.T) {
 	cases := filterCases{
 		file("server", true),
