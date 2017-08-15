@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/monochromegane/go-gitignore"
+	"github.com/denormal/go-gitignore"
 )
 
 // Filter is the interface used to filter on files.
@@ -40,10 +40,15 @@ func isDot(s string) bool {
 
 // FilterPatterns filters on the given reader.
 func FilterPatterns(r io.Reader) (Filter, error) {
-	filter := gitignore.NewGitIgnoreFromReader(".", r)
+	// Ignore errors by default
+	filter := gitignore.New(r, ".", func(e gitignore.Error) bool { return true })
 
 	return FilterFunc(func(info os.FileInfo) bool {
-		return filter.Match(info.Name(), info.IsDir())
+		if match := filter.Relative(info.Name(), info.IsDir()); match != nil {
+			return match.Ignore()
+		} else {
+			return false
+		}
 	}), nil
 }
 
