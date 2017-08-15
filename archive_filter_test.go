@@ -59,18 +59,14 @@ func TestFilterDotfiles(t *testing.T) {
 	cases.Test(t, FilterDotfiles)
 }
 
-func TestFilterPatterns(t *testing.T) {
+func TestFilterPatterns_files(t *testing.T) {
 	cases := filterCases{
 		file("server", true),
 		file("main.go", false),
 		file("Readme.md", false),
-		file(".git", false),
-		// file(".git/foo", false),
-		// file(".git/foo/bar", false),
 	}
 
 	patterns := strings.NewReader(`
-.git
 *.md
 *.go
 `)
