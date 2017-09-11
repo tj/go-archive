@@ -6,9 +6,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apex/log"
 	"github.com/tj/assert"
-	archive "github.com/tj/go-archive"
+	"github.com/tj/go-archive"
 )
+
+func init() {
+	log.SetLevel(log.DebugLevel)
+}
 
 func TestFilterDotfiles(t *testing.T) {
 	os.Chdir("testdata/node")
@@ -27,6 +32,9 @@ func TestFilterDotfiles(t *testing.T) {
 	expected := `Readme.md mode=-rw-r--r-- size=0
 app.js mode=-rw-r--r-- size=0
 package.json mode=-rw-r--r-- size=0
+src mode=drwxr-xr-x
+src/something mode=drwxr-xr-x
+src/something/index.js mode=-rw-r--r-- size=0
 up.json mode=-rw-r--r-- size=0
 `
 
@@ -40,6 +48,7 @@ func TestFilterPatterns_dir(t *testing.T) {
 	patterns := strings.NewReader(`
 *.md
 .something
+src
 `)
 
 	f, err := archive.FilterPatterns(patterns)
@@ -68,11 +77,10 @@ func TestFilterPatterns_negated(t *testing.T) {
 	defer os.Chdir("../..")
 
 	patterns := strings.NewReader(`
-*.md
-*.json
+*
+!.something/**
+!src/**
 !up.json
-.something
-!.something
 `)
 
 	f, err := archive.FilterPatterns(patterns)
@@ -93,7 +101,9 @@ func TestFilterPatterns_negated(t *testing.T) {
 .something/bar/baz mode=drwxr-xr-x
 .something/bar/baz/something mode=-rw-r--r-- size=0
 .something/foo mode=-rw-r--r-- size=0
-app.js mode=-rw-r--r-- size=0
+src mode=drwxr-xr-x
+src/something mode=drwxr-xr-x
+src/something/index.js mode=-rw-r--r-- size=0
 up.json mode=-rw-r--r-- size=0
 `
 
@@ -109,6 +119,7 @@ func TestFilterPatterns_nested(t *testing.T) {
 *.json
 !up.json
 .something/bar/**
+src/**
 `)
 
 	f, err := archive.FilterPatterns(patterns)
