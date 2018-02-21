@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tj/assert"
-	"github.com/tj/go-archive"
+	"github.com/matthewmueller/go-archive"
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {
@@ -189,10 +189,8 @@ func TestZipWriter_transform(t *testing.T) {
 	s, err := tree(dir)
 	assert.NoError(t, err, "tree")
 
-	expected := `testdata mode=drwxr-xr-x
-testdata/static mode=drwxr-xr-x
-testdata/static/index.html mode=-rwxrwxrwx size=117
-testdata/static/style.css mode=-rwxrwxrwx size=44
+	expected := `index.html mode=-rwxrwxrwx size=117
+style.css mode=-rwxrwxrwx size=44
 `
 
 	assert.Equal(t, expected, s)
