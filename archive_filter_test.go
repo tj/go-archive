@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/apex/log"
-	"github.com/tj/assert"
-	"github.com/tj/go-archive"
+	"github.com/matthewmueller/go-archive"
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {

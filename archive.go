@@ -95,10 +95,16 @@ func (a *Archive) Open() error {
 
 // AddDir directory recursively.
 func (a *Archive) AddDir(root string) error {
-	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(root, func(abspath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
+
+		path, err := filepath.Rel(root, abspath)
+		if err != nil {
+			return err
+		}
+		path = filepath.Clean(path)
 
 		if path == "." {
 			return nil
@@ -142,7 +148,7 @@ func (a *Archive) AddDir(root string) error {
 			return nil
 		}
 
-		f, err := os.Open(path)
+		f, err := os.Open(abspath)
 		if err != nil {
 			return errors.Wrap(err, "opening file")
 		}
